@@ -1,0 +1,20 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model ShareLink {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  content   String    @db.Text
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  usedAt    DateTime?
+
+  @@index([token])
+  @@map("share_links")
+}

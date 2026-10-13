@@ -1,0 +1,147 @@
+---
+# =============================================================================
+# Ansible Playbook: Deploy One-Time Link Generator to Remote Linux Server
+# =============================================================================
+# Demonstrates:
+#   1. Remote SSH connectivity & fact gathering
+#   2. Automated Docker and Docker Compose installation on Ubuntu
+#   3. Target application directory management
+#   4. Deploying project code & environment configurations
+#   5. Starting / restarting multi-container stack via Docker Compose
+# =============================================================================
+
+- name: Deploy One-Time Link Generator Stack
+  hosts: app_servers
+  become: true # Execute tasks with sudo/root privileges
+  vars:
+    app_directory: "/opt/one-time-link-generator"
+    # IMPORTANT: Override this with your real Aiven MySQL URL during execution:
+    # e.g.: ansible-playbook -i inventory.ini playbook.yml -e "database_url=mysql://..."
+    database_url: "{{ lookup('env', 'DATABASE_URL') | default('mysql://avnadmin:PLACEHOLDER@host:port/defaultdb?ssl-mode=REQUIRED', true) }}"
+
+  tasks:
+    # -------------------------------------------------------------------------
+    # Section 1: System Package Updates & Prerequisites
+    # -------------------------------------------------------------------------
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install required prerequisite packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - rsync
+        state: present
+
+    # -------------------------------------------------------------------------
+    # Section 2: Install Docker Engine (if not already installed)
+    # -------------------------------------------------------------------------
+    - name: Check if Docker is already installed
+      ansible.builtin.command: docker --version
+      register: docker_installed
+      ignore_errors: true
+      changed_when: false
+
+    - name: Download Docker official GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: docker_installed.rc != 0
+
+    - name: Add Docker official APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: docker_installed.rc != 0
+
+    - name: Install Docker CE and Docker Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+      when: docker_installed.rc != 0
+
+    - name: Ensure Docker service is enabled and active
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add remote SSH user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    # -------------------------------------------------------------------------
+    # Section 3: Prepare Application Directory & Deploy Files
+    # -------------------------------------------------------------------------
+    - name: Create application target directory
+      ansible.builtin.file:
+        path: "{{ app_directory }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Copy project files to remote server
+      ansible.builtin.synchronize:
+        src: "../"
+        dest: "{{ app_directory }}/"
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=node_modules"
+          - "--exclude=dist"
+          - "--exclude=.env"
+          - "--exclude=ansible"
+
+    - name: Deploy .env configuration with Aiven database credentials
+      ansible.builtin.copy:
+        dest: "{{ app_directory }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
+        content: |
+          DATABASE_URL="{{ database_url }}"
+          PORT=5000
+          ZIPKIN_ENDPOINT="http://zipkin:9411/api/v2/spans"
+
+    # -------------------------------------------------------------------------
+    # Section 4: Start or Restart Application Containers
+    # -------------------------------------------------------------------------
+    - name: Build and launch Docker Compose services
+      ansible.builtin.command:
+        cmd: docker compose up -d --build
+        chdir: "{{ app_directory }}"
+      register: compose_output
+      changed_when: "'Creating' in compose_output.stdout or 'Recreating' in compose_output.stdout"
+
+    - name: Verify backend health endpoint is responding
+      ansible.builtin.uri:
+        url: "http://localhost:5000/api/health"
+        status_code: [200, 503]
+        return_content: true
+      register: health_check
+      until: health_check.status == 200 or health_check.status == 503
+      retries: 6
+      delay: 5
+
+    - name: Display deployment completion summary
+      ansible.builtin.debug:
+        msg:
+          - "=========================================================="
+          - " Deployment Complete!"
+          - " Frontend Web App:  http://{{ ansible_host }}:3000"
+          - " Backend API:       http://{{ ansible_host }}:5000/api/links"
+          - " Zipkin Tracing UI: http://{{ ansible_host }}:9411"
+          - " Health Check:      {{ health_check.json.status }}"
+          - "=========================================================="
