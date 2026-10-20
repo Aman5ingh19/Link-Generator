@@ -1,6 +1,8 @@
 # 🔐 One-Time Link Generator
 
-> A beginner-friendly, production-ready full-stack web application for generating secure, self-destructing confidential links. Built to learn **React, TypeScript, Node.js, Express, Cloud-hosted MySQL (Aiven), Docker, Jenkins CI, Ansible, and Zipkin Distributed Tracing** step-by-step.
+> A beginner-friendly, production-ready full-stack web application for generating secure, self-destructing confidential links. Built to learn **React, TypeScript, Node.js, Express, Cloud-hosted MySQL (Aiven), Docker, Jenkins CI/CD, Ansible, and Zipkin Distributed Tracing** step-by-step.
+
+📄 **[Download Complete Architecture & DevOps Guide (PDF)](./PROJECT_DOCUMENTATION.pdf)** — *A comprehensive 9-page guide explaining the system architecture, tech stack rationale, Zipkin distributed tracing, Jenkins vs GitHub Actions, and Ansible deployment.*
 
 ---
 
