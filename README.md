@@ -18,38 +18,6 @@
 
 ---
 
-## 💼 Resume & Interview Showcase
-
-> **Looking to feature this project on your Resume, LinkedIn, or in Technical Interviews?** Use the battle-tested talking points and bullet points below.
-
-### 📌 Resume Bullet Points (Copy & Paste for Resume / CV)
-
-#### For Full-Stack / Software Engineer Roles:
-* **Architected and implemented** a full-stack, ephemeral secret-sharing platform using **React 18, TypeScript, Node.js, and Express**, eliminating permanent credential leaks in team communications (Slack/Teams).
-* **Engineered atomic database transactions** with **Prisma ORM** and cloud-hosted **Aiven MySQL**, preventing concurrency race conditions and enforcing strict single-use link consumption (**HTTP 410 Gone**).
-* **Integrated OpenTelemetry & Zipkin distributed tracing** across frontend `fetch()` requests, Express middleware, and database queries, enabling sub-millisecond latency bottleneck isolation.
-* **Achieved a 236 KB minified frontend bundle** with sub-second HMR using **Vite** and configured **Nginx** reverse proxying to streamline API routing and eliminate CORS vulnerabilities.
-
-#### For DevOps / Cloud / Platform Engineer Roles:
-* **Designed and automated a 7-stage Jenkins CI/CD pipeline** executing Vitest test suites, compiling TypeScript, building multi-stage Docker images, and publishing versioned artifacts to Docker Hub.
-* **Orchestrated automated zero-downtime remote deployments** to cloud Linux environments using **Ansible** playbooks over SSH, synchronizing environment secrets and verifying health endpoints.
-* **Containerized microservices using Docker Compose** with multi-stage builds (reducing image sizes by >65%) and isolated bridge networks connecting frontend, backend, and Zipkin tracing.
-* **Maintained 100% automated test coverage** for link creation, token expiration, and security lifecycle using **Vitest** and **Supertest** with in-memory mocks.
-
----
-
-### 🎙️ Technical Interview Cheat Sheet (STAR Method)
-
-| Question / Topic | Structured Answer (STAR Framework) |
-|---|---|
-| **Why did you build this project? (Situation & Task)** | Sharing passwords, API tokens, and OTPs via Slack, Teams, or email permanently exposes them in conversation backups and search indexes. I built a zero-knowledge "burn-after-reading" link generator where confidential notes are destroyed the instant they are accessed. |
-| **How did you prevent race condition exploits? (Action)** | If two concurrent requests hit a one-time link at the exact same millisecond, a naive check-then-update approach could leak the secret twice. I engineered an atomic single-statement SQL update with row-level locks in MySQL (`WHERE token = ? AND usedAt IS NULL`). Only the first serialized transaction updates the row and reveals the secret; all subsequent requests immediately receive `410 ALREADY_USED`. |
-| **Why use Jenkins instead of GitHub Actions? (Action)** | In enterprise and private-cloud environments, deployment servers often reside in private VPCs with no inbound internet exposure. Jenkins was chosen because it runs inside the private network and triggers Ansible directly over SSH without exposing ports. Furthermore, Jenkins offers encrypted credentials storage and zero build-minute quotas. |
-| **How does Distributed Tracing work here? (Action)** | The frontend OpenTelemetry browser SDK intercepts `window.fetch()` and injects standard W3C `traceparent` HTTP headers. The backend Express OpenTelemetry SDK extracts the trace context, creating linked child spans for middleware, business logic (`linkService.createLink`), and database queries. All spans flow into Zipkin for unified waterfall latency visualization. |
-| **What were the measurable outcomes? (Result)** | Sub-100ms API response time, 236 KB frontend bundle, 100% automated test pass rate across all edge cases, and a fully hands-off, zero-downtime deployment pipeline from Git push to production. |
-
----
-
 ## 📑 Table of Contents
 
 1. [Project Overview & Architecture](#-project-overview--architecture)
