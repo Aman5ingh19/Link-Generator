@@ -15,9 +15,16 @@
   become: true # Execute tasks with sudo/root privileges
   vars:
     app_directory: "/opt/one-time-link-generator"
-    # IMPORTANT: Override this with your real Aiven MySQL URL during execution:
+    # IMPORTANT: Override with your real Aiven MySQL URL during execution:
     # e.g.: ansible-playbook -i inventory.ini playbook.yml -e "database_url=mysql://..."
     database_url: "{{ lookup('env', 'DATABASE_URL') | default('mysql://avnadmin:PLACEHOLDER@host:port/defaultdb?ssl-mode=REQUIRED', true) }}"
+
+    # Docker image tags — overridden by Jenkins CI/CD with the exact versioned
+    # build tag (e.g., 'your-user/link-generator-backend:42') so each deployment
+    # is pinned to the specific image that passed CI.
+    # When running manually, ':latest' is used as the default.
+    backend_image:  "{{ backend_image  | default('your-dockerhub-username/link-generator-backend:latest')  }}"
+    frontend_image: "{{ frontend_image | default('your-dockerhub-username/link-generator-frontend:latest') }}"
 
   tasks:
     # -------------------------------------------------------------------------
@@ -116,8 +123,17 @@
           ZIPKIN_ENDPOINT="http://zipkin:9411/api/v2/spans"
 
     # -------------------------------------------------------------------------
-    # Section 4: Start or Restart Application Containers
+    # Section 4: Pull Latest Docker Images & Start / Restart Containers
     # -------------------------------------------------------------------------
+    - name: Pull latest Docker images from Docker Hub
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: "{{ app_directory }}"
+      # `docker compose pull` fetches the exact image tags referenced in
+      # docker-compose.yml (or overridden by Jenkins -e flags). This ensures
+      # the server runs the version that passed CI, not a stale cached layer.
+      changed_when: true
+
     - name: Build and launch Docker Compose services
       ansible.builtin.command:
         cmd: docker compose up -d --build
