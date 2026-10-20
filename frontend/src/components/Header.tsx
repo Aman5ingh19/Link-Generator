@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, Activity } from 'lucide-react';
+import { Lock, Activity, FileText } from 'lucide-react';
 import { fetchHealth, HealthInfo } from '../api/client';
 
 export const Header: React.FC = () => {
@@ -40,14 +40,27 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      <div className="health-badge" title="Backend health & database status">
-        <Activity size={14} />
-        <span
-          className={`health-dot ${health?.status === 'healthy' ? 'healthy' : 'degraded'}`}
-        />
-        <span>
-          {health ? (health.status === 'healthy' ? 'API & MySQL Online' : 'API Degraded') : 'Checking API...'}
-        </span>
+      <div className="header-actions">
+        <a
+          href="/PROJECT_DOCUMENTATION.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="doc-link-btn"
+          title="Download Comprehensive Architecture & DevOps Guide (PDF)"
+        >
+          <FileText size={14} />
+          <span>Documentation (PDF)</span>
+        </a>
+
+        <div className="health-badge" title="Backend health & database status">
+          <Activity size={14} />
+          <span
+            className={`health-dot ${health?.status === 'healthy' ? 'healthy' : 'degraded'}`}
+          />
+          <span>
+            {health ? (health.status === 'healthy' ? 'API & MySQL Online' : 'API Degraded') : 'Checking API...'}
+          </span>
+        </div>
       </div>
     </header>
   );
